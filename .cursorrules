@@ -1,0 +1,51 @@
+# Aparavi DTC - Cursor Instructions
+
+## Documentation First
+
+**CRITICAL: Always consult the documentation at /Users/armin/.cursor/extensions/aparavi.aparavi-0.0.1/docs/api before writing any Aparavi-related code.**
+
+The **aparavi.aparavi** extension provides SDK documentation in its extension directory for easy reference.
+
+### Available Documentation
+
+- `/Users/armin/.cursor/extensions/aparavi.aparavi-0.0.1/docs/api/APARAVI_typescript_API.md` - Complete TypeScript SDK API reference
+- `/Users/armin/.cursor/extensions/aparavi.aparavi-0.0.1/docs/api/APARAVI_python_API.md` - Complete Python SDK API reference  
+- `/Users/armin/.cursor/extensions/aparavi.aparavi-0.0.1/docs/api/APARAVI_COMPONENT_REFERENCE.md` - Pipeline components reference
+- `/Users/armin/.cursor/extensions/aparavi.aparavi-0.0.1/docs/api/APARAVI_PIPELINE_RULES.md` - Pipeline structure and rules
+- `/Users/armin/.cursor/extensions/aparavi.aparavi-0.0.1/docs/api/APARAVI_README.md` - Platform overview and concepts
+
+### Rules
+
+1. **Before generating code**: Read the relevant documentation file(s) from `/Users/armin/.cursor/extensions/aparavi.aparavi-0.0.1/docs/api/`
+2. **Verify all API signatures**: Match method names, parameters, and types exactly from docs
+3. **Use documented patterns**: Follow the examples and patterns in the documentation
+4. **State your source**: Mention which doc file you referenced in your response
+5. **Never assume**: If it's not in the docs, don't guess - check the source code or ask
+
+### Quick Reference
+
+| Working with | Read this file |
+|--------------|----------------|
+| AparaviClient methods | `/Users/armin/.cursor/extensions/aparavi.aparavi-0.0.1/docs/api/APARAVI_typescript_API.md` or `/Users/armin/.cursor/extensions/aparavi.aparavi-0.0.1/docs/api/APARAVI_python_API.md` |
+| Pipeline components | `/Users/armin/.cursor/extensions/aparavi.aparavi-0.0.1/docs/api/APARAVI_COMPONENT_REFERENCE.md` |
+| Pipeline structure | `/Users/armin/.cursor/extensions/aparavi.aparavi-0.0.1/docs/api/APARAVI_PIPELINE_RULES.md` |
+| Platform concepts | `/Users/armin/.cursor/extensions/aparavi.aparavi-0.0.1/docs/api/APARAVI_README.md` |
+
+---
+
+**The documentation at /Users/armin/.cursor/extensions/aparavi.aparavi-0.0.1/docs/api is the source of truth. Always check it first.**
+
+## MANDATORY VERIFICATION CHECKLIST
+
+Before writing ANY Aparavi code, you MUST:
+- [ ] List all files in /Users/armin/.cursor/extensions/aparavi.aparavi-0.0.1/docs/api directory
+- [ ] Read APARAVI_PIPELINE_RULES.md (if pipeline work)
+- [ ] Read APARAVI_COMPONENT_REFERENCE.md (if using components)
+- [ ] Read APARAVI_python_API.md or APARAVI_typescript_API.md
+- [ ] State which files you read in your response
+- [ ] Quote the relevant section from docs before implementing
+
+If you skip ANY step, the user will reject your work immediately.
+
+### Aparavi End of DTC instructions
+

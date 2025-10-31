@@ -1,0 +1,19 @@
+# Core RAG dependencies
+qdrant-client>=1.7.0
+sentence-transformers>=2.2.2
+openai>=1.12.0  # Optional: if using OpenAI embeddings instead of sentence-transformers
+
+# Document parsing
+PyPDF2>=3.0.1
+pdfplumber>=0.10.3  # Better for tables and structured content
+python-docx>=1.1.0
+openpyxl>=3.1.2  # For Excel files if needed
+
+# Text processing
+tiktoken>=0.5.2  # For token counting
+
+# Utilities
+tqdm>=4.66.1
+python-dotenv>=1.0.0
+pydantic>=2.5.0
+
