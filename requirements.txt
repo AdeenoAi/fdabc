@@ -1,19 +1,29 @@
 # Core RAG dependencies
 qdrant-client>=1.7.0
 sentence-transformers>=2.2.2
-openai>=1.12.0  # Optional: if using OpenAI embeddings instead of sentence-transformers
 
-# Document parsing
+# LlamaIndex for agent flow
+llama-index>=0.10.0
+llama-index-vector-stores-qdrant>=0.1.0
+llama-index-embeddings-openai>=0.1.0
+llama-parse>=0.4.0
+
+# LLM providers
+openai>=1.12.0
+anthropic>=0.18.0  # For Claude (alternative to GPT-4)
+xai>=0.1.0  # For Grok
+
+# Document parsing (fallback)
 PyPDF2>=3.0.1
-pdfplumber>=0.10.3  # Better for tables and structured content
+pdfplumber>=0.10.3
 python-docx>=1.1.0
-openpyxl>=3.1.2  # For Excel files if needed
+openpyxl>=3.1.2
 
 # Text processing
-tiktoken>=0.5.2  # For token counting
+tiktoken>=0.5.2
 
 # Utilities
 tqdm>=4.66.1
 python-dotenv>=1.0.0
 pydantic>=2.5.0
-
+httpx>=0.25.0

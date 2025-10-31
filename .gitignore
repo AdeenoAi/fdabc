@@ -1,0 +1,17 @@
+.env
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+venv/
+env/
+ENV/
+.venv
+*.swp
+*.swo
+*~
+.DS_Store
+output/
+qdrant_data/
+
