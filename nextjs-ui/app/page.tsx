@@ -1,358 +1,315 @@
 'use client'
 
-import { useState } from 'react'
-import FileUpload from '@/components/FileUpload'
-import SectionSelector from '@/components/SectionSelector'
-import DocumentEditor from '@/components/DocumentEditor'
-import CollectionManager from '@/components/CollectionManager'
-import GenerationPreview from '@/components/GenerationPreview'
-import toast from 'react-hot-toast'
-
-type UploadedFile = {
-  file: File
-  type: 'template' | 'document'
-  id: string
-}
-
-type Section = {
-  name: string
-  path: string
-  level: number
-}
+import Link from 'next/link'
+import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
+import { CheckCircle2, FileText, Clock, Shield, ArrowRight, Zap } from "lucide-react"
 
 export default function Home() {
-  const [step, setStep] = useState<'upload' | 'select' | 'preview' | 'generate' | 'edit'>('upload')
-  const [templateFile, setTemplateFile] = useState<File | null>(null)
-  const [documentFiles, setDocumentFiles] = useState<File[]>([])
-  const [sections, setSections] = useState<Section[]>([])
-  const [selectedSection, setSelectedSection] = useState<string>('')
-  const [generatedContent, setGeneratedContent] = useState<string>('')
-  const [isGenerating, setIsGenerating] = useState(false)
-  const [verification, setVerification] = useState<any>(null)
-  const [generationPreview, setGenerationPreview] = useState<any>(null)
-  const [isLoadingPreview, setIsLoadingPreview] = useState(false)
-
-  const handleTemplateUpload = (file: File) => {
-    setTemplateFile(file)
-    // Analyze template to get sections
-    analyzeTemplate(file)
-  }
-
-  const [isIndexing, setIsIndexing] = useState(false)
-  const [collectionName, setCollectionName] = useState('bio_drug_docs')
-
-  const handleDocumentsUpload = (files: File[]) => {
-    setDocumentFiles(files)
-  }
-
-  const handleIndexDocuments = async () => {
-    if (documentFiles.length === 0) {
-      toast.error('Please upload documents first')
-      return
-    }
-
-    setIsIndexing(true)
-    const formData = new FormData()
-    documentFiles.forEach((file) => {
-      formData.append('documents', file)
-    })
-    formData.append('collection', collectionName)
-
-    try {
-      const response = await fetch('/api/index-documents', {
-        method: 'POST',
-        body: formData,
-      })
-
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Indexing failed')
-      }
-
-      const data = await response.json()
-      toast.success(`Indexed ${data.documentsCount} documents to collection: ${data.collection}`)
-    } catch (error: any) {
-      toast.error(`Failed to index documents: ${error.message}`)
-      console.error(error)
-    } finally {
-      setIsIndexing(false)
-    }
-  }
-
-  const analyzeTemplate = async (file: File) => {
-    const formData = new FormData()
-    formData.append('template', file)
-
-    try {
-      const response = await fetch('/api/analyze-template', {
-        method: 'POST',
-        body: formData,
-      })
-
-      if (!response.ok) throw new Error('Failed to analyze template')
-
-      const data = await response.json()
-      setSections(data.sections || [])
-      setStep('select')
-      toast.success('Template analyzed successfully')
-    } catch (error) {
-      toast.error('Failed to analyze template')
-      console.error(error)
-    }
-  }
-
-  const handleSectionSelect = async (sectionName: string) => {
-    setSelectedSection(sectionName)
-    // Load preview for the selected section
-    await loadPreview(sectionName)
-  }
-
-  const loadPreview = async (sectionName: string) => {
-    if (!templateFile) return
-
-    setIsLoadingPreview(true)
-    const formData = new FormData()
-    formData.append('template', templateFile)
-    formData.append('section', sectionName)
-
-    try {
-      const response = await fetch('/api/preview', {
-        method: 'POST',
-        body: formData,
-      })
-
-      if (!response.ok) throw new Error('Preview failed')
-
-      const data = await response.json()
-      setGenerationPreview(data)
-      setStep('preview')
-    } catch (error) {
-      toast.error('Failed to load preview')
-      console.error(error)
-      // Fallback to direct generation if preview fails
-      setStep('select')
-    } finally {
-      setIsLoadingPreview(false)
-    }
-  }
-
-  const handleGenerate = async (editedPrompt?: string) => {
-    if (!templateFile || !selectedSection) {
-      toast.error('Please upload template and select a section')
-      return
-    }
-
-    setIsGenerating(true)
-    setStep('edit') // Move to edit step to show loading
-    
-    const formData = new FormData()
-    formData.append('template', templateFile)
-    formData.append('section', selectedSection)
-    formData.append('collection', collectionName)
-    
-    // Add custom prompt if edited and not empty
-    if (editedPrompt && editedPrompt.trim()) {
-      formData.append('custom_prompt', editedPrompt)
-    }
-
-    // Add documents if uploaded (these are for potential future use or temporary indexing)
-    documentFiles.forEach((file) => {
-      formData.append('documents', file)
-    })
-
-    try {
-      const response = await fetch('/api/generate', {
-        method: 'POST',
-        body: formData,
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Generation failed' }))
-        throw new Error(errorData.error || errorData.details || 'Generation failed')
-      }
-
-      const data = await response.json()
-      
-      if (data.error && !data.content) {
-        // If there's an error and no content, show detailed error
-        const errorDetails = data.details ? `\n\n${data.details}` : ''
-        const errorInfo = data.stdout || data.stderr ? `\n\nDebug info:\n${data.stdout || ''}\n${data.stderr || ''}` : ''
-        throw new Error(`${data.error}${errorDetails}${errorInfo}`)
-      }
-      
-      // Even if there's an error flag, show the content (which might be an error message)
-      setGeneratedContent(data.content || data.error || 'No content received')
-      setVerification(data.verification || null)
-      setStep('edit')
-      
-      if (data.verification) {
-        const confidence = data.verification.confidence || 0
-        if (confidence >= 0.8) {
-          toast.success('Section generated with high confidence!')
-        } else if (confidence >= 0.6) {
-          toast('Section generated with medium confidence - review recommended', { icon: '⚠️' })
-        } else {
-          toast.error('Section generated with low confidence - please review carefully')
-        }
-      } else {
-        toast.success('Section generated successfully!')
-      }
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to generate section')
-      console.error('Generation error:', error)
-      setStep('preview') // Go back to preview if generation fails
-    } finally {
-      setIsGenerating(false)
-    }
-  }
-
-  const handleSave = async (editedContent: string) => {
-    try {
-      const response = await fetch('/api/save', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          content: editedContent,
-          section: selectedSection,
-        }),
-      })
-
-      if (!response.ok) throw new Error('Save failed')
-
-      toast.success('Document saved successfully!')
-    } catch (error) {
-      toast.error('Failed to save document')
-      console.error(error)
-    }
-  }
-
   return (
-    <main className="min-h-screen p-8">
-      <div className="max-w-7xl mx-auto">
-        <h1 className="text-4xl font-bold mb-8 text-center">
-          Document Generator - Bio/Drug RAG System
-        </h1>
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="border-b border-border bg-card">
+        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+              <span className="text-primary-foreground font-bold text-lg">A</span>
+            </div>
+            <span className="text-xl font-semibold text-foreground">AdeenoAi</span>
+          </div>
+          <nav className="hidden md:flex items-center gap-8">
+            <a href="#features" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+              Features
+            </a>
+            <a href="#benefits" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+              Benefits
+            </a>
+            <a href="#contact" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+              Contact
+            </a>
+          </nav>
+          <Button variant="default" size="sm" asChild>
+            <Link href="/dashboard">Get Started</Link>
+          </Button>
+        </div>
+      </header>
 
-        {/* Step Indicator */}
-        <div className="mb-8 flex justify-center">
-          <div className="flex gap-4">
-            <div className={`px-4 py-2 rounded ${step === 'upload' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}>
-              1. Upload
+      {/* Hero Section */}
+      <section className="container mx-auto px-4 py-20 md:py-32">
+        <div className="max-w-4xl mx-auto text-center">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-secondary text-secondary-foreground text-sm mb-6">
+            <span className="w-2 h-2 bg-accent rounded-full"></span>
+            Streamlining FDA Regulatory Workflows
+          </div>
+          <h1 className="text-4xl md:text-6xl font-bold text-foreground mb-6 text-balance leading-tight">
+            Accelerate Drug Approval with AI-Powered Regulatory Intelligence
+          </h1>
+          <p className="text-lg md:text-xl text-muted-foreground mb-8 text-pretty max-w-2xl mx-auto leading-relaxed">
+            AdeenoAi transforms complex FDA documentation and regulatory workflows into streamlined, compliant
+            processes. Get your life-saving drugs to market faster.
+          </p>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <Button size="lg" asChild className="w-full sm:w-auto">
+              <Link href="/dashboard">
+                Get Started
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+            <Button size="lg" variant="outline" className="w-full sm:w-auto bg-transparent">
+              Watch Demo
+            </Button>
+          </div>
+        </div>
+      </section>
+
+      {/* Stats Section */}
+      <section className="border-y border-border bg-card">
+        <div className="container mx-auto px-4 py-12">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="text-center">
+              <div className="text-4xl font-bold text-foreground mb-2">60%</div>
+              <div className="text-sm text-muted-foreground">Faster Documentation</div>
             </div>
-            <div className={`px-4 py-2 rounded ${step === 'select' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}>
-              2. Select Section
+            <div className="text-center border-x-0 md:border-x border-border">
+              <div className="text-4xl font-bold text-foreground mb-2">99.8%</div>
+              <div className="text-sm text-muted-foreground">Compliance Accuracy</div>
             </div>
-            <div className={`px-4 py-2 rounded ${step === 'generate' || step === 'edit' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}>
-              3. Generate & Edit
+            <div className="text-center">
+              <div className="text-4xl font-bold text-foreground mb-2">$2M+</div>
+              <div className="text-sm text-muted-foreground">Average Cost Savings</div>
             </div>
           </div>
         </div>
+      </section>
 
-        {/* Upload Step */}
-        {step === 'upload' && (
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <FileUpload
-              onTemplateUpload={handleTemplateUpload}
-              onDocumentsUpload={handleDocumentsUpload}
-              onNext={() => {
-                if (templateFile) {
-                  setStep('select')
-                } else {
-                  toast.error('Please upload a template first')
-                }
-              }}
-            />
-            
-            <div className="mt-6">
-              <CollectionManager
-                collectionName={collectionName}
-                onCollectionChange={setCollectionName}
-              />
+      {/* Features Section */}
+      <section id="features" className="container mx-auto px-4 py-20 md:py-32">
+        <div className="text-center mb-16">
+          <h2 className="text-3xl md:text-5xl font-bold text-foreground mb-4 text-balance">
+            Built for Regulatory Excellence
+          </h2>
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto text-pretty leading-relaxed">
+            Our AI-powered platform handles the complexity of FDA submissions so your team can focus on innovation.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <Card className="p-6 hover:shadow-lg transition-shadow">
+            <div className="w-12 h-12 bg-secondary rounded-lg flex items-center justify-center mb-4">
+              <FileText className="h-6 w-6 text-accent" />
             </div>
+            <h3 className="text-xl font-semibold text-foreground mb-2">Automated Documentation</h3>
+            <p className="text-muted-foreground leading-relaxed">
+              Generate compliant FDA documentation automatically from your research data and clinical trials.
+            </p>
+          </Card>
 
-            {documentFiles.length > 0 && (
-              <div className="mt-4 p-4 border border-blue-200 rounded-lg bg-blue-50">
-                <div className="flex items-center justify-between">
+          <Card className="p-6 hover:shadow-lg transition-shadow">
+            <div className="w-12 h-12 bg-secondary rounded-lg flex items-center justify-center mb-4">
+              <CheckCircle2 className="h-6 w-6 text-accent" />
+            </div>
+            <h3 className="text-xl font-semibold text-foreground mb-2">Compliance Validation</h3>
+            <p className="text-muted-foreground leading-relaxed">
+              Real-time validation against FDA guidelines ensures your submissions meet all regulatory requirements.
+            </p>
+          </Card>
+
+          <Card className="p-6 hover:shadow-lg transition-shadow">
+            <div className="w-12 h-12 bg-secondary rounded-lg flex items-center justify-center mb-4">
+              <Clock className="h-6 w-6 text-accent" />
+            </div>
+            <h3 className="text-xl font-semibold text-foreground mb-2">Workflow Optimization</h3>
+            <p className="text-muted-foreground leading-relaxed">
+              Streamline review cycles and approvals with intelligent routing and automated status tracking.
+            </p>
+          </Card>
+
+          <Card className="p-6 hover:shadow-lg transition-shadow">
+            <div className="w-12 h-12 bg-secondary rounded-lg flex items-center justify-center mb-4">
+              <Shield className="h-6 w-6 text-accent" />
+            </div>
+            <h3 className="text-xl font-semibold text-foreground mb-2">Secure & Compliant</h3>
+            <p className="text-muted-foreground leading-relaxed">
+              Enterprise-grade security with full audit trails and 21 CFR Part 11 compliance built-in.
+            </p>
+          </Card>
+
+          <Card className="p-6 hover:shadow-lg transition-shadow">
+            <div className="w-12 h-12 bg-secondary rounded-lg flex items-center justify-center mb-4">
+              <Zap className="h-6 w-6 text-accent" />
+            </div>
+            <h3 className="text-xl font-semibold text-foreground mb-2">AI-Powered Insights</h3>
+            <p className="text-muted-foreground leading-relaxed">
+              Leverage machine learning to identify potential issues and optimize submission strategies.
+            </p>
+          </Card>
+
+          <Card className="p-6 hover:shadow-lg transition-shadow">
+            <div className="w-12 h-12 bg-secondary rounded-lg flex items-center justify-center mb-4">
+              <FileText className="h-6 w-6 text-accent" />
+            </div>
+            <h3 className="text-xl font-semibold text-foreground mb-2">Version Control</h3>
+            <p className="text-muted-foreground leading-relaxed">
+              Track every change with comprehensive version history and rollback capabilities.
+            </p>
+          </Card>
+        </div>
+      </section>
+
+      {/* Benefits Section */}
+      <section id="benefits" className="bg-card border-y border-border">
+        <div className="container mx-auto px-4 py-20 md:py-32">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            <div>
+              <h2 className="text-3xl md:text-5xl font-bold text-foreground mb-6 text-balance">
+                Transform Your Regulatory Process
+              </h2>
+              <p className="text-lg text-muted-foreground mb-8 leading-relaxed">
+                AdeenoAi eliminates bottlenecks in the drug approval process, helping pharmaceutical companies bring
+                critical treatments to patients faster while maintaining the highest standards of compliance.
+              </p>
+              <ul className="space-y-4">
+                <li className="flex items-start gap-3">
+                  <CheckCircle2 className="h-6 w-6 text-accent flex-shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-sm font-medium text-blue-900">
-                      {documentFiles.length} document(s) ready to index
-                    </p>
-                    <p className="text-xs text-blue-700 mt-1">
-                      Will be indexed into: <strong>{collectionName}</strong>
-                    </p>
+                    <div className="font-semibold text-foreground">Reduce Time-to-Market</div>
+                    <div className="text-muted-foreground">Cut submission preparation time by up to 60%</div>
                   </div>
-                  <button
-                    onClick={handleIndexDocuments}
-                    disabled={isIndexing}
-                    className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-sm"
-                  >
-                    {isIndexing ? 'Indexing...' : 'Index Documents'}
-                  </button>
-                </div>
-                <p className="text-xs text-blue-600 mt-2">
-                  Index documents to make them searchable for generation. All documents are added to the same collection (does not create new collection per upload).
-                </p>
+                </li>
+                <li className="flex items-start gap-3">
+                  <CheckCircle2 className="h-6 w-6 text-accent flex-shrink-0 mt-0.5" />
+                  <div>
+                    <div className="font-semibold text-foreground">Minimize Regulatory Risk</div>
+                    <div className="text-muted-foreground">AI-powered validation catches issues before submission</div>
+                  </div>
+                </li>
+                <li className="flex items-start gap-3">
+                  <CheckCircle2 className="h-6 w-6 text-accent flex-shrink-0 mt-0.5" />
+                  <div>
+                    <div className="font-semibold text-foreground">Scale Your Operations</div>
+                    <div className="text-muted-foreground">Handle multiple submissions simultaneously with ease</div>
+                  </div>
+                </li>
+              </ul>
+            </div>
+            <div className="bg-secondary rounded-lg p-8 lg:p-12">
+              <div className="aspect-square bg-muted rounded-lg flex items-center justify-center">
+                <img
+                  src="/regulatory-workflow-dashboard-interface.jpg"
+                  alt="AdeenoAi Platform Interface"
+                  className="w-full h-full object-cover rounded-lg"
+                />
               </div>
-            )}
-          </div>
-        )}
-
-        {/* Section Selection Step */}
-        {step === 'select' && (
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <SectionSelector
-              sections={sections}
-              selectedSection={selectedSection}
-              onSelect={handleSectionSelect}
-              onGenerate={handleGenerate}
-              isGenerating={isGenerating}
-            />
-          </div>
-        )}
-
-        {/* Preview Step */}
-        {step === 'preview' && generationPreview && (
-          <GenerationPreview
-            preview={generationPreview}
-            onGenerate={handleGenerate}
-            onBack={() => setStep('select')}
-          />
-        )}
-
-        {/* Loading Preview */}
-        {isLoadingPreview && (
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <div className="text-center py-8">
-              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mb-4"></div>
-              <p className="text-gray-600">Loading generation preview...</p>
             </div>
           </div>
-        )}
+        </div>
+      </section>
 
-        {/* Generation & Edit Step */}
-        {(step === 'generate' || step === 'edit') && (
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            {isGenerating ? (
-              <div className="text-center py-12">
-                <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mb-4"></div>
-                <p className="text-gray-600 text-lg">Generating section...</p>
-                <p className="text-gray-500 text-sm mt-2">This may take a minute</p>
-              </div>
-            ) : (
-              <DocumentEditor
-                content={generatedContent}
-                sectionName={selectedSection}
-                onSave={handleSave}
-                onBack={() => setStep('preview')}
-                verification={verification}
-              />
-            )}
+      {/* CTA Section */}
+      <section id="contact" className="container mx-auto px-4 py-20 md:py-32">
+        <div className="max-w-3xl mx-auto text-center">
+          <h2 className="text-3xl md:text-5xl font-bold text-foreground mb-6 text-balance">
+            Ready to Accelerate Your FDA Submissions?
+          </h2>
+          <p className="text-lg text-muted-foreground mb-8 text-pretty leading-relaxed">
+            Join leading pharmaceutical companies using AdeenoAi to streamline their regulatory workflows and bring
+            life-saving treatments to market faster.
+          </p>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <Button size="lg" asChild className="w-full sm:w-auto">
+              <Link href="/dashboard">
+                Get Started
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+            <Button size="lg" variant="outline" className="w-full sm:w-auto bg-transparent">
+              Contact Sales
+            </Button>
           </div>
-        )}
-      </div>
-    </main>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="border-t border-border bg-card">
+        <div className="container mx-auto px-4 py-12">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+            <div>
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+                  <span className="text-primary-foreground font-bold text-lg">A</span>
+                </div>
+                <span className="text-xl font-semibold text-foreground">AdeenoAi</span>
+              </div>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Optimizing regulatory workflows for the pharmaceutical industry.
+              </p>
+            </div>
+            <div>
+              <h4 className="font-semibold text-foreground mb-4">Product</h4>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li>
+                  <a href="#features" className="hover:text-foreground transition-colors">
+                    Features
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-foreground transition-colors">
+                    Pricing
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-foreground transition-colors">
+                    Security
+                  </a>
+                </li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-semibold text-foreground mb-4">Company</h4>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li>
+                  <a href="#" className="hover:text-foreground transition-colors">
+                    About
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-foreground transition-colors">
+                    Careers
+                  </a>
+                </li>
+                <li>
+                  <a href="#contact" className="hover:text-foreground transition-colors">
+                    Contact
+                  </a>
+                </li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-semibold text-foreground mb-4">Resources</h4>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li>
+                  <a href="#" className="hover:text-foreground transition-colors">
+                    Documentation
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-foreground transition-colors">
+                    Blog
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-foreground transition-colors">
+                    Support
+                  </a>
+                </li>
+              </ul>
+            </div>
+          </div>
+          <div className="pt-8 border-t border-border text-center text-sm text-muted-foreground">
+            © 2025 AdeenoAi. All rights reserved.
+          </div>
+        </div>
+      </footer>
+    </div>
   )
 }
-

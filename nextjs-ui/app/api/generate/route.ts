@@ -69,31 +69,131 @@ export async function POST(request: NextRequest) {
       args.push('--custom-prompt', customPromptPath)
     }
 
-    const pythonProcess = spawn('python3', args, {
+    // Use -u flag for unbuffered output so logs appear immediately
+    const pythonProcess = spawn('python3', ['-u', ...args], {
       env: {
         ...process.env,
         PATH: process.env.PATH || '',
+        PYTHONUNBUFFERED: '1', // Also set env var for extra safety
       },
     })
 
     let stdout = ''
     let stderr = ''
+    const logs: Array<{ type: string; message: string; timestamp: string }> = []
+    
+    // Accumulate partial lines across chunks
+    let stdoutBuffer = ''
+    let stderrBuffer = ''
+
+    // Parse log lines and extract progress messages
+    const parseLogLine = (text: string): { type: string; message: string } | null => {
+      // Try multiple patterns to catch logs in different formats
+      const patterns = [
+        /\[LOG_(PROGRESS|ERROR|WARNING)\]\s*(.+)/,  // Standard format
+        /\[LOG_(PROGRESS|ERROR|WARNING)\]\s*(.+?)(?:\n|$)/,  // With line end
+        /\[LOG_(PROGRESS|ERROR|WARNING)\]\s*(.+?)(?:\r|$)/,  // With carriage return
+      ]
+      
+      for (const pattern of patterns) {
+        const logMatch = text.match(pattern)
+        if (logMatch && logMatch[2]) {
+          return {
+            type: logMatch[1].toLowerCase(),
+            message: logMatch[2].trim()
+          }
+        }
+      }
+      
+      // Debug: log non-matching lines that contain LOG_ to see what we're missing
+      if (text.includes('LOG_') && !text.match(/\[LOG_(PROGRESS|ERROR|WARNING)\]/)) {
+        console.log('[DEBUG] Line contains LOG_ but did not match:', text.substring(0, 200))
+      }
+      
+      return null
+    }
+
+    // Process buffer and extract complete log lines
+    const processBuffer = (buffer: string, isStderr: boolean = false) => {
+      const lines = buffer.split('\n')
+      // Keep the last line as it might be incomplete
+      const completeLines = lines.slice(0, -1)
+      const remainingLine = lines[lines.length - 1]
+      
+      for (const line of completeLines) {
+        const trimmedLine = line.trim()
+        if (trimmedLine) {
+          // Debug: log all lines that might be logs
+          if (trimmedLine.includes('LOG_')) {
+            console.log('[DEBUG] Processing potential log line:', trimmedLine.substring(0, 100))
+          }
+          
+          const logEntry = parseLogLine(trimmedLine)
+          if (logEntry) {
+            const logObj = {
+              type: logEntry.type,
+              message: logEntry.message,
+              timestamp: new Date().toISOString()
+            }
+            logs.push(logObj)
+            console.log(`[LOG CAPTURED] ${logEntry.type}: ${logEntry.message}`)
+            
+          } else if (trimmedLine.includes('LOG_')) {
+            console.log('[DEBUG] Line with LOG_ did not parse:', trimmedLine.substring(0, 150))
+          }
+        }
+      }
+      
+      return remainingLine
+    }
 
     pythonProcess.stdout.on('data', (data) => {
       const text = data.toString()
       stdout += text
       console.log('Python stdout:', text)
+      
+      // Accumulate and process complete lines
+      stdoutBuffer += text
+      stdoutBuffer = processBuffer(stdoutBuffer, false)
     })
 
     pythonProcess.stderr.on('data', (data) => {
       const text = data.toString()
       stderr += text
       console.error('Python stderr:', text)
+      
+      // Accumulate and process complete lines
+      stderrBuffer += text
+      stderrBuffer = processBuffer(stderrBuffer, true)
     })
 
     const exitCode = await new Promise<number>((resolve) => {
       pythonProcess.on('close', (code) => {
         console.log(`Python process exited with code: ${code}`)
+        
+        // Process any remaining lines after process closes
+        if (stdoutBuffer.trim()) {
+          const logEntry = parseLogLine(stdoutBuffer.trim())
+          if (logEntry) {
+            logs.push({
+              type: logEntry.type,
+              message: logEntry.message,
+              timestamp: new Date().toISOString()
+            })
+          }
+        }
+        if (stderrBuffer.trim()) {
+          const logEntry = parseLogLine(stderrBuffer.trim())
+          if (logEntry) {
+            logs.push({
+              type: logEntry.type,
+              message: logEntry.message,
+              timestamp: new Date().toISOString()
+            })
+          }
+        }
+        
+        console.log(`Collected ${logs.length} log entries`)
         resolve(code || 0)
       })
       
@@ -255,12 +355,16 @@ export async function POST(request: NextRequest) {
       // Ignore cleanup errors
     }
 
-    return NextResponse.json({ 
+    // Send final response with all data
+    const finalResponse = { 
       content, 
       verification,  // Will be extracted if available
       stdout, 
-      stderr 
-    })
+      stderr,
+      logs: logs  // Already objects, no need to parse
+    }
+    
+    return NextResponse.json(finalResponse)
   } catch (error: any) {
     console.error('API error:', error)
     return NextResponse.json(

@@ -6,8 +6,8 @@ import { Toaster } from 'react-hot-toast'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'Document Generator - Bio/Drug RAG System',
-  description: 'Generate documents from templates using AI',
+  title: 'AdeenoAi - Regulatory Workflow Processing',
+  description: 'Streamline your regulatory document generation with AI-powered workflows',
 }
 
 export default function RootLayout({

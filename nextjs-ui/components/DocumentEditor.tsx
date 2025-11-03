@@ -90,11 +90,11 @@ export default function DocumentEditor({
     <div className="space-y-4">
       {/* Verification Banner */}
       {verification && (
-        <div className={`p-4 rounded-lg border-2 ${
-          confidence >= 0.8 ? 'bg-green-50 border-green-200' :
-          confidence >= 0.6 ? 'bg-yellow-50 border-yellow-200' :
-          'bg-red-50 border-red-200'
-        }`}>
+        <div className={`p-5 rounded-xl border-2 ${
+          confidence >= 0.8 ? 'bg-gradient-to-r from-emerald-50 to-teal-50 border-emerald-300' :
+          confidence >= 0.6 ? 'bg-gradient-to-r from-amber-50 to-yellow-50 border-amber-300' :
+          'bg-gradient-to-r from-red-50 to-rose-50 border-red-300'
+        } shadow-sm`}>
           <div className="flex items-start justify-between">
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-2">
@@ -138,17 +138,20 @@ export default function DocumentEditor({
         </div>
       )}
 
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-semibold">{sectionName}</h2>
+      <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-200">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-900">{sectionName}</h2>
+          <p className="text-sm text-slate-500 mt-1">Review and edit the generated content</p>
+        </div>
         <div className="flex gap-2">
           <button
             onClick={() => setViewMode(viewMode === 'preview' ? 'source' : 'preview')}
-            className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2"
+            className="px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 flex items-center gap-2 text-slate-700 font-medium transition-colors"
           >
             {viewMode === 'preview' ? (
               <>
                 <Edit2 className="w-4 h-4" />
-                Source
+                Edit Source
               </>
             ) : (
               <>
@@ -159,23 +162,23 @@ export default function DocumentEditor({
           </button>
           <button
             onClick={onBack}
-            className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2"
+            className="px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 flex items-center gap-2 text-slate-700 font-medium transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
             Back
           </button>
           <button
             onClick={() => onSave(editedContent)}
-            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 flex items-center gap-2"
+            className="px-5 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 flex items-center gap-2 font-medium shadow-md hover:shadow-lg transition-all"
           >
             <Save className="w-4 h-4" />
-            Save
+            Save Document
           </button>
         </div>
       </div>
 
       {viewMode === 'preview' ? (
-        <div className="border rounded-lg p-6 bg-white min-h-[600px]">
+        <div className="border border-slate-200 rounded-xl p-8 bg-white min-h-[600px] shadow-sm">
           <MarkdownWithEditableTables 
             content={editedContent} 
             onTableUpdate={handleTableUpdate}
@@ -185,7 +188,7 @@ export default function DocumentEditor({
         <textarea
           value={editedContent}
           onChange={(e) => setEditedContent(e.target.value)}
-          className="w-full h-[600px] p-4 border rounded-lg font-mono text-sm markdown-editor"
+          className="w-full h-[600px] p-6 border border-slate-300 rounded-xl font-mono text-sm markdown-editor bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
           placeholder="Edit markdown content..."
         />
       )}

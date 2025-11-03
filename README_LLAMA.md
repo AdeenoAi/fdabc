@@ -26,6 +26,15 @@ OPENAI_API_KEY=your_openai_key
 
 # Optional: For Grok instead of GPT-4
 XAI_API_KEY=your_xai_key
+
+# LLM Provider Selection (default: openai)
+# Options: "openai" or "grok"
+LLM_PROVIDER=openai
+
+# LLM Model Name (default: gpt-4o)
+# Options for OpenAI: "gpt-4o", "gpt-4-turbo-preview", "gpt-4", "gpt-3.5-turbo"
+# Options for Grok: "grok-beta"
+LLM_MODEL=gpt-4o
 ```
 
 Get LlamaParse API key: https://cloud.llamaindex.ai/
@@ -41,20 +50,25 @@ This will:
 - Preserve table structure in markdown format
 
 4. **Generate documents**:
+
+You can set default LLM provider and model in `.env` (see step 2), or override via command line:
+
 ```bash
-# Using GPT-4
+# Using GPT-4 (uses .env defaults if set, otherwise defaults to openai/gpt-4o)
 python generate_document_llama.py \
   --template template.docx \
-  --section "Methods" \
-  --llm openai \
-  --model gpt-4-turbo-preview
+  --section "Methods"
 
-# Using Grok
+# Override to use Grok via command line
 python generate_document_llama.py \
   --template template.docx \
   --section "Methods" \
   --llm grok \
   --model grok-beta
+
+# Or set in .env to make Grok the default:
+# LLM_PROVIDER=grok
+# LLM_MODEL=grok-beta
 ```
 
 ## Key Differences from Basic Version

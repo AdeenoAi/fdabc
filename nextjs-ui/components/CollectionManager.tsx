@@ -36,27 +36,29 @@ export default function CollectionManager({
   }, [])
 
   return (
-    <div className="border rounded-lg p-4 bg-gray-50">
-      <div className="flex items-center justify-between mb-2">
-        <label className="text-sm font-medium flex items-center gap-2">
-          <Database className="w-4 h-4" />
-          Qdrant Collection
+    <div className="border-2 border-slate-200 rounded-xl p-5 bg-gradient-to-br from-slate-50 to-blue-50/30 shadow-sm">
+      <div className="flex items-center justify-between mb-3">
+        <label className="text-sm font-bold text-slate-900 flex items-center gap-2">
+          <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
+            <Database className="w-4 h-4 text-white" />
+          </div>
+          Vector Database Collection
         </label>
         <button
           onClick={fetchCollections}
           disabled={isLoading}
-          className="text-xs text-blue-500 hover:text-blue-700 flex items-center gap-1"
+          className="text-xs text-indigo-600 hover:text-indigo-700 flex items-center gap-1 font-medium hover:bg-indigo-50 px-2 py-1 rounded transition-colors"
         >
           <RefreshCw className={`w-3 h-3 ${isLoading ? 'animate-spin' : ''}`} />
           Refresh
         </button>
       </div>
       
-      <div className="flex gap-2">
+      <div className="flex gap-2 mb-3">
         <select
           value={collectionName}
           onChange={(e) => onCollectionChange(e.target.value)}
-          className="flex-1 px-3 py-2 border border-gray-300 rounded text-sm"
+          className="flex-1 px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
         >
           {collections.length > 0 ? (
             collections.map((col) => (
@@ -73,11 +75,11 @@ export default function CollectionManager({
           value={collectionName}
           onChange={(e) => onCollectionChange(e.target.value)}
           placeholder="Or enter custom name"
-          className="flex-1 px-3 py-2 border border-gray-300 rounded text-sm"
+          className="flex-1 px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
         />
       </div>
       
-      <p className="text-xs text-gray-500 mt-2">
+      <p className="text-xs text-slate-600 mt-2">
         Documents are indexed into this collection. All sessions use the same collection by default.
       </p>
     </div>

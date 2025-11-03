@@ -49,32 +49,32 @@ export default function FileUpload({
   }
 
   return (
-    <div className="space-y-6">
-      <h2 className="text-2xl font-semibold mb-4">Upload Files</h2>
-
+    <div className="space-y-8">
       {/* Template Upload */}
-      <div className="border-2 border-dashed border-gray-300 rounded-lg p-6">
-        <label className="block text-sm font-medium mb-2">
-          Template File (Required)
+      <div className="border-2 border-dashed border-slate-300 rounded-xl p-6 bg-slate-50/50 hover:border-blue-400 hover:bg-blue-50/30 transition-all">
+        <label className="block text-sm font-semibold text-slate-900 mb-2">
+          Template File <span className="text-red-500">*</span>
         </label>
-        <p className="text-sm text-gray-500 mb-4">
+        <p className="text-sm text-slate-600 mb-4">
           Upload your template document (.pdf, .docx, or .md)
         </p>
 
         {templateFile ? (
-          <div className="flex items-center justify-between bg-gray-50 p-4 rounded">
+          <div className="flex items-center justify-between bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
             <div className="flex items-center gap-3">
-              <File className="w-5 h-5 text-blue-500" />
+              <div className="flex items-center justify-center w-10 h-10 bg-blue-100 rounded-lg">
+                <File className="w-5 h-5 text-blue-600" />
+              </div>
               <div>
-                <p className="font-medium">{templateFile.name}</p>
-                <p className="text-sm text-gray-500">
+                <p className="font-semibold text-slate-900">{templateFile.name}</p>
+                <p className="text-sm text-slate-500">
                   {(templateFile.size / 1024).toFixed(2)} KB
                 </p>
               </div>
             </div>
             <button
               onClick={removeTemplate}
-              className="text-red-500 hover:text-red-700"
+              className="text-red-500 hover:text-red-700 hover:bg-red-50 p-2 rounded-lg transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
@@ -82,7 +82,7 @@ export default function FileUpload({
         ) : (
           <button
             onClick={() => templateInputRef.current?.click()}
-            className="w-full border-2 border-dashed border-gray-300 rounded-lg p-8 hover:border-blue-500 transition-colors"
+            className="w-full border-2 border-dashed border-slate-300 rounded-xl p-10 hover:border-blue-400 hover:bg-blue-50/50 transition-all group"
           >
             <input
               ref={templateInputRef}
@@ -91,26 +91,31 @@ export default function FileUpload({
               onChange={handleTemplateChange}
               className="hidden"
             />
-            <div className="flex flex-col items-center gap-2">
-              <Upload className="w-8 h-8 text-gray-400" />
-              <span className="text-gray-600">Click to upload template</span>
+            <div className="flex flex-col items-center gap-3">
+              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center group-hover:bg-blue-200 transition-colors">
+                <Upload className="w-8 h-8 text-blue-600" />
+              </div>
+              <div className="text-center">
+                <span className="text-slate-700 font-medium">Click to upload template</span>
+                <p className="text-xs text-slate-500 mt-1">or drag and drop</p>
+              </div>
             </div>
           </button>
         )}
       </div>
 
       {/* Documents Upload */}
-      <div className="border-2 border-dashed border-gray-300 rounded-lg p-6">
-        <label className="block text-sm font-medium mb-2">
-          Source Documents (Optional)
+      <div className="border-2 border-dashed border-slate-300 rounded-xl p-6 bg-slate-50/50 hover:border-indigo-400 hover:bg-indigo-50/30 transition-all">
+        <label className="block text-sm font-semibold text-slate-900 mb-2">
+          Source Documents <span className="text-slate-400 text-xs font-normal">(Optional)</span>
         </label>
-        <p className="text-sm text-gray-500 mb-4">
+        <p className="text-sm text-slate-600 mb-4">
           Upload documents to extract data from (.pdf, .docx, .txt)
         </p>
 
         <button
           onClick={() => documentsInputRef.current?.click()}
-          className="w-full border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-blue-500 transition-colors mb-4"
+          className="w-full border-2 border-dashed border-slate-300 rounded-xl p-6 hover:border-indigo-400 hover:bg-indigo-50/50 transition-all group mb-4"
         >
           <input
             ref={documentsInputRef}
@@ -120,9 +125,11 @@ export default function FileUpload({
             onChange={handleDocumentsChange}
             className="hidden"
           />
-          <div className="flex items-center justify-center gap-2">
-            <Upload className="w-5 h-5 text-gray-400" />
-            <span className="text-gray-600">Add more documents</span>
+          <div className="flex items-center justify-center gap-3">
+            <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center group-hover:bg-indigo-200 transition-colors">
+              <Upload className="w-5 h-5 text-indigo-600" />
+            </div>
+            <span className="text-slate-700 font-medium">Add source documents</span>
           </div>
         </button>
 
@@ -131,20 +138,22 @@ export default function FileUpload({
             {documentFiles.map((file, index) => (
               <div
                 key={index}
-                className="flex items-center justify-between bg-gray-50 p-3 rounded"
+                className="flex items-center justify-between bg-white p-3 rounded-lg border border-slate-200 shadow-sm hover:shadow-md transition-shadow"
               >
                 <div className="flex items-center gap-3">
-                  <File className="w-4 h-4 text-green-500" />
+                  <div className="flex items-center justify-center w-8 h-8 bg-emerald-100 rounded-lg">
+                    <File className="w-4 h-4 text-emerald-600" />
+                  </div>
                   <div>
-                    <p className="text-sm font-medium">{file.name}</p>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-sm font-semibold text-slate-900">{file.name}</p>
+                    <p className="text-xs text-slate-500">
                       {(file.size / 1024).toFixed(2)} KB
                     </p>
                   </div>
                 </div>
                 <button
                   onClick={() => removeDocument(index)}
-                  className="text-red-500 hover:text-red-700"
+                  className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1.5 rounded-lg transition-colors"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -155,13 +164,16 @@ export default function FileUpload({
       </div>
 
       {/* Next Button */}
-      <div className="flex justify-end">
+      <div className="flex justify-end pt-4">
         <button
           onClick={onNext}
           disabled={!templateFile}
-          className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
+          className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 disabled:from-slate-300 disabled:to-slate-400 disabled:cursor-not-allowed font-medium shadow-md hover:shadow-lg transition-all flex items-center gap-2"
         >
-          Next: Select Section
+          Continue to Section Selection
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
         </button>
       </div>
     </div>

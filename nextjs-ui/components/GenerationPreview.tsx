@@ -58,12 +58,18 @@ export default function GenerationPreview({
 
   if (!preview.template_found) {
     return (
-      <div className="bg-white rounded-lg shadow-lg p-6">
-        <div className="text-center py-8">
-          <p className="text-red-600 mb-4">{preview.message || 'Section not found in template'}</p>
+      <div className="p-8">
+        <div className="text-center py-12">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </div>
+          <p className="text-red-600 font-semibold mb-2">Section not found in template</p>
+          <p className="text-slate-500 text-sm mb-6">Please check your template file and try again</p>
           <button
             onClick={onBack}
-            className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600"
+            className="px-5 py-2.5 border border-slate-300 rounded-lg hover:bg-slate-50 text-slate-700 font-medium transition-colors"
           >
             Go Back
           </button>
@@ -73,38 +79,42 @@ export default function GenerationPreview({
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-lg p-6 space-y-6">
-      <div className="flex items-center justify-between border-b pb-4">
-        <h2 className="text-2xl font-semibold">
-          Preview: {preview.section_name}
-        </h2>
-        <div className="flex gap-2">
+    <div className="p-8 space-y-6">
+      <div className="flex items-center justify-between border-b border-slate-200 pb-6">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-900">
+            Generation Preview
+          </h2>
+          <p className="text-sm text-slate-600 mt-1">{preview.section_name}</p>
+        </div>
+        <div className="flex gap-3">
           <button
             onClick={onBack}
-            className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+            className="px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 text-slate-700 font-medium transition-colors"
           >
             Back
           </button>
           <button
             onClick={() => {
-              // Use edited prompt if it exists and is different from original
               const promptToUse = editedPrompt && editedPrompt.trim() ? editedPrompt : undefined
               onGenerate(promptToUse)
             }}
-            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 flex items-center gap-2"
+            className="px-5 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 flex items-center gap-2 font-medium shadow-md hover:shadow-lg transition-all"
           >
             <Play className="w-4 h-4" />
-            Generate with This Plan
+            Generate Section
           </button>
         </div>
       </div>
 
       {/* Structure Preview */}
       {preview.structure_preview && (
-        <div className="border rounded-lg p-4 bg-blue-50">
-          <div className="flex items-center gap-2 mb-3">
-            <FileText className="w-5 h-5 text-blue-600" />
-            <h3 className="text-lg font-semibold text-blue-900">Structure Preview</h3>
+        <div className="border-2 border-blue-200 rounded-xl p-6 bg-gradient-to-br from-blue-50 to-indigo-50 shadow-sm">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+              <FileText className="w-5 h-5 text-white" />
+            </div>
+            <h3 className="text-lg font-bold text-blue-900">Structure Preview</h3>
           </div>
           
           <div className="space-y-3">
@@ -114,23 +124,25 @@ export default function GenerationPreview({
             
             {preview.structure_preview.has_tables && (
               <div>
-                <span className="font-medium">Tables:</span> {preview.structure_preview.table_count}
-                <div className="mt-2 space-y-2">
+                <span className="font-semibold text-slate-900">Tables:</span> <span className="text-blue-600 font-bold">{preview.structure_preview.table_count}</span>
+                <div className="mt-3 space-y-3">
                   {preview.structure_preview.tables.map((table, idx) => (
-                    <div key={idx} className="bg-white p-3 rounded border border-blue-200">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Table className="w-4 h-4 text-blue-600" />
-                        <span className="font-medium">Table {table.index + 1}</span>
-                        <span className="text-sm text-gray-600">
-                          ({table.columns} columns)
+                    <div key={idx} className="bg-white p-4 rounded-lg border-2 border-blue-200 shadow-sm hover:shadow-md transition-shadow">
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                          <Table className="w-4 h-4 text-blue-600" />
+                        </div>
+                        <span className="font-bold text-slate-900">Table {table.index + 1}</span>
+                        <span className="text-sm text-slate-600 bg-blue-50 px-2 py-0.5 rounded-full">
+                          {table.columns} columns
                         </span>
                       </div>
-                      <div className="text-sm text-gray-700">
-                        <span className="font-medium">Columns:</span>{' '}
-                        {table.headers.join(', ')}
+                      <div className="text-sm text-slate-700 mb-2">
+                        <span className="font-semibold">Columns:</span>{' '}
+                        <span className="text-slate-600">{table.headers.join(', ')}</span>
                       </div>
-                      <div className="text-xs text-gray-500 mt-1">
-                        Rows: {table.estimated_rows}
+                      <div className="text-xs text-slate-500 bg-slate-50 px-2 py-1 rounded">
+                        Estimated rows: {table.estimated_rows}
                       </div>
                     </div>
                   ))}
@@ -152,10 +164,12 @@ export default function GenerationPreview({
 
       {/* Extraction Plan */}
       {preview.extraction_plan && (
-        <div className="border rounded-lg p-4 bg-green-50">
-          <div className="flex items-center gap-2 mb-3">
-            <Search className="w-5 h-5 text-green-600" />
-            <h3 className="text-lg font-semibold text-green-900">Extraction Plan</h3>
+        <div className="border-2 border-emerald-200 rounded-xl p-6 bg-gradient-to-br from-emerald-50 to-teal-50 shadow-sm">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 bg-emerald-600 rounded-lg flex items-center justify-center">
+              <Search className="w-5 h-5 text-white" />
+            </div>
+            <h3 className="text-lg font-bold text-emerald-900">Extraction Plan</h3>
           </div>
           
           <div className="space-y-3">
@@ -167,14 +181,16 @@ export default function GenerationPreview({
             </div>
             
             <div>
-              <span className="font-medium">Extraction Targets:</span>
-              <div className="mt-2 space-y-2">
+              <span className="font-semibold text-slate-900">Extraction Targets:</span>
+              <div className="mt-3 space-y-2">
                 {preview.extraction_plan.extraction_targets.map((target, idx) => (
-                  <div key={idx} className="bg-white p-2 rounded border border-green-200">
-                    <span className="font-medium capitalize">{target.type}:</span>{' '}
-                    {target.description}
+                  <div key={idx} className="bg-white p-3 rounded-lg border-2 border-emerald-200 shadow-sm">
+                    <div className="flex items-start gap-2">
+                      <span className="font-bold capitalize text-emerald-700">{target.type}:</span>
+                      <span className="text-slate-700 flex-1">{target.description}</span>
+                    </div>
                     {target.columns && (
-                      <div className="text-xs text-gray-600 mt-1">
+                      <div className="text-xs text-slate-600 mt-2 bg-emerald-50 px-2 py-1 rounded">
                         Columns: {target.columns.join(', ')}
                       </div>
                     )}
@@ -187,15 +203,17 @@ export default function GenerationPreview({
       )}
 
       {/* Prompt Preview (Editable) */}
-      <div className="border rounded-lg p-4">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <Edit2 className="w-5 h-5 text-purple-600" />
-            <h3 className="text-lg font-semibold">Generation Prompt</h3>
+      <div className="border-2 border-slate-200 rounded-xl p-6 bg-white shadow-sm">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-indigo-600 rounded-lg flex items-center justify-center">
+              <Edit2 className="w-5 h-5 text-white" />
+            </div>
+            <h3 className="text-lg font-bold text-slate-900">Generation Prompt</h3>
           </div>
           <button
             onClick={() => setIsEditing(!isEditing)}
-            className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50"
+            className="px-4 py-2 text-sm border border-slate-300 rounded-lg hover:bg-slate-50 text-slate-700 font-medium transition-colors"
           >
             {isEditing ? 'Done Editing' : 'Edit Prompt'}
           </button>
@@ -205,11 +223,11 @@ export default function GenerationPreview({
           <textarea
             value={editedPrompt}
             onChange={(e) => setEditedPrompt(e.target.value)}
-            className="w-full h-64 p-3 border border-gray-300 rounded font-mono text-sm"
+            className="w-full h-64 p-4 border border-slate-300 rounded-xl font-mono text-sm bg-slate-50 focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
             placeholder="Edit the prompt..."
           />
         ) : (
-          <pre className="bg-gray-50 p-4 rounded border overflow-auto max-h-64 text-sm whitespace-pre-wrap">
+          <pre className="bg-slate-50 p-5 rounded-xl border border-slate-200 overflow-auto max-h-64 text-sm whitespace-pre-wrap font-mono">
             {editedPrompt}
           </pre>
         )}
@@ -247,20 +265,19 @@ export default function GenerationPreview({
         </details>
       )}
 
-      <div className="flex justify-end gap-2 pt-4 border-t">
+      <div className="flex justify-end gap-3 pt-6 border-t border-slate-200">
         <button
           onClick={onBack}
-          className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+          className="px-5 py-2.5 border border-slate-300 rounded-lg hover:bg-slate-50 text-slate-700 font-medium transition-colors"
         >
           Cancel
         </button>
         <button
           onClick={() => {
-            // Use edited prompt if it exists and is different from original
             const promptToUse = editedPrompt && editedPrompt.trim() ? editedPrompt : undefined
             onGenerate(promptToUse)
           }}
-          className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 flex items-center gap-2"
+          className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 flex items-center gap-2 font-medium shadow-md hover:shadow-lg transition-all"
         >
           <Play className="w-4 h-4" />
           Generate Section

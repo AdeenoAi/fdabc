@@ -5,6 +5,7 @@ from pathlib import Path
 from llama_agent_flow import LlamaAgentFlow
 import os
 from dotenv import load_dotenv
+from config import LLM_PROVIDER, LLM_MODEL
 
 # Load environment variables
 load_dotenv()
@@ -41,15 +42,15 @@ def main():
     parser.add_argument(
         "--llm",
         type=str,
-        default="openai",
+        default=LLM_PROVIDER,
         choices=["openai", "grok"],
-        help="LLM provider (default: openai)"
+        help=f"LLM provider (default: {LLM_PROVIDER} from .env or openai)"
     )
     parser.add_argument(
         "--model",
         type=str,
-        default="gpt-4o",
-        help="Model name (default: gpt-4o). Options: gpt-4o, gpt-4-turbo-preview, gpt-4, gpt-3.5-turbo"
+        default=LLM_MODEL,
+        help=f"Model name (default: {LLM_MODEL} from .env or gpt-4o). Options: gpt-4o, gpt-4-turbo-preview, gpt-4, gpt-3.5-turbo, grok-beta"
     )
     parser.add_argument(
         "--top-k",
@@ -90,6 +91,9 @@ def main():
     
     args = parser.parse_args()
     
+    # Print initial log to verify script is running
+    print("[LOG_PROGRESS] Python script started", flush=True)
+    
     # Check API keys
     if args.llm == "openai":
         if not os.getenv("OPENAI_API_KEY"):
@@ -116,6 +120,7 @@ def main():
     logger.info("Initializing LlamaIndex agent flow...")
     logger.info(f"LLM: {args.llm} ({args.model})")
     logger.info(f"Verification: {'Enabled' if args.verify else 'Disabled'}")
+    print(f"[LOG_PROGRESS] Initializing: {args.llm}/{args.model}, collection: {args.collection}", flush=True)
     
     try:
         if args.verify:
@@ -205,6 +210,7 @@ Common causes:
     
     # Generate section
     logger.info(f"Generating section: {section_name}")
+    print(f"[LOG_PROGRESS] Generating section: {section_name}", flush=True)
     
     try:
         if args.verify:

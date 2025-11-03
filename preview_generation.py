@@ -2,6 +2,7 @@
 import argparse
 import json
 import logging
+import re
 from typing import Dict, Optional, List
 from pathlib import Path
 from template_parser import TemplateParser

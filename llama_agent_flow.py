@@ -6,6 +6,15 @@ import os
 
 logger = logging.getLogger(__name__)
 
+# Try to import config for defaults, but don't fail if not available
+try:
+    from config import LLM_PROVIDER, LLM_MODEL
+    DEFAULT_LLM_PROVIDER = LLM_PROVIDER
+    DEFAULT_LLM_MODEL = LLM_MODEL
+except ImportError:
+    DEFAULT_LLM_PROVIDER = "openai"
+    DEFAULT_LLM_MODEL = "gpt-4-turbo-preview"
+
 try:
     from llama_index.core import VectorStoreIndex, Settings, StorageContext, Document
     from llama_index.core.node_parser import MarkdownNodeParser, SentenceSplitter
@@ -39,16 +48,17 @@ class LlamaAgentFlow:
     def __init__(
         self,
         collection_name: str = "bio_drug_docs",
-        llm_provider: str = "openai",  # "openai" or "grok"
-        model: str = "gpt-4-turbo-preview",
+        llm_provider: Optional[str] = None,  # "openai" or "grok" (defaults to .env)
+        model: Optional[str] = None,  # Model name (defaults to .env)
         qdrant_url: str = "http://localhost:6333"
     ):
         if not LLAMAINDEX_AVAILABLE:
             raise ImportError("LlamaIndex not installed. Install with: pip install llama-index")
         
         self.collection_name = collection_name
-        self.llm_provider = llm_provider
-        self.model = model
+        # Use provided values or fall back to .env defaults
+        self.llm_provider = llm_provider or DEFAULT_LLM_PROVIDER
+        self.model = model or DEFAULT_LLM_MODEL
         self.qdrant_url = qdrant_url
         
         # Initialize LLM
@@ -177,10 +187,14 @@ class LlamaAgentFlow:
         template_tables = self._extract_template_tables(template_content) if template_content else []
         num_template_tables = len(template_tables)
         
+        if num_template_tables > 0:
+            print(f"[LOG_PROGRESS] Template: {num_template_tables} table(s) to generate", flush=True)
+        
         # Use custom prompt if provided, otherwise build default
         if custom_prompt:
             query = custom_prompt
             logger.info("Using custom prompt for generation")
+            print("[LOG_PROGRESS] Using custom prompt", flush=True)
         elif template_content:
             query = f"""You are generating a {section_name} section based on the EXACT template structure provided below.
 
@@ -268,33 +282,13 @@ ACCURACY REQUIREMENTS:
 
 {table_instructions}
 
-STRUCTURED DATA EXTRACTION:
-- Extract ALL contact information: names, phone numbers, email addresses
-- Extract conversation details, messages, and communication context
-- Organize information clearly with clear sections for each entity/contact
-- Format contact information as:
-  📝 Info: [Name or contact details]
-  📱 Phone: [Phone number]
-  📧 Email: [Email address]  
-  💬 Conversation: [Details or messages]
-- Extract and preserve ALL specific details from conversations
-- Include timestamps, dates, and contextual information when available
-- Group related information together (same person's name, phone, email together)
-
-CONTENT ORGANIZATION:
-- For each distinct contact/person, create a clear section with all their information
-- Use clear labels and formatting to separate different types of information
-- Preserve the original wording and details from source documents
-- Do NOT summarize away important details like phone numbers, emails, or specific conversation points
-- List each contact/entry separately with all associated information
-
 CONTENT QUALITY REQUIREMENTS:
 - Use the retrieved source documents DIRECTLY - do not over-summarize or compress the information
 - Include specific details, measurements, and technical information from the sources
 - Preserve technical terminology and precise language from source documents
-- Include relevant context and explanations
+- Include relevant context and explanations, not just bullet points
 - Write comprehensive, detailed content that accurately represents the source material
-- When multiple sources provide related information, include all relevant details rather than summarizing
+- When multiple sources provide related information, synthesize them meaningfully rather than just summarizing
 
 CRITICAL: Extract and report values EXACTLY as they appear in source documents. 
 Do not modify, estimate, or approximate numerical values.
@@ -307,7 +301,9 @@ TABLE VALUE VERIFICATION:
 """
         
         logger.info("Querying RAG system with table preservation...")
+        print(f"[LOG_PROGRESS] Retrieving data from {top_k} document chunks...", flush=True)
         try:
+            print(f"[LOG_PROGRESS] Generating content with {self.model}...", flush=True)
             response = query_engine.query(enhanced_query)
             
             generated_content = str(response).strip()
@@ -317,8 +313,12 @@ TABLE VALUE VERIFICATION:
                 generated_content = f"# {section_name}\n\n[Error: LLM returned empty response. Please check your API keys and model availability.]"
             
             logger.info(f"Generated content length: {len(generated_content)} characters")
+            table_count = generated_content.count('| --- |') + generated_content.count('| ---|')
+            word_count = len(generated_content.split())
+            print(f"[LOG_PROGRESS] Generated: {word_count} words, {table_count} table(s)", flush=True)
         except Exception as e:
             logger.error(f"Error during LLM query: {e}")
+            print(f"[LOG_ERROR] Error during LLM query: {str(e)}", flush=True)
             import traceback
             traceback.print_exc()
             generated_content = f"# {section_name}\n\n[Error during generation: {str(e)}]"
@@ -336,6 +336,10 @@ TABLE VALUE VERIFICATION:
                 if file_name not in sources:
                     sources.append(file_name)
         
+        if sources:
+            source_names = [s.split('/').pop().split('\\').pop() for s in sources]
+            print(f"[LOG_PROGRESS] Sources: {', '.join(source_names[:2])}{' (+' + str(len(source_names) - 2) + ')' if len(source_names) > 2 else ''}", flush=True)
+        
         # Post-process: enforce template table count
         generated_content = self._preserve_tables(generated_content)
         
@@ -350,8 +354,10 @@ TABLE VALUE VERIFICATION:
         # Ensure we always return non-empty content
         if not generated_content or not generated_content.strip():
             logger.warning("Generated content is empty, creating placeholder")
+            print("[LOG_WARNING] Generated content is empty, creating placeholder", flush=True)
             generated_content = f"# {section_name}\n\n[No content generated. Please check:\n1. API keys are set correctly\n2. Documents are indexed in collection\n3. LLM model is available]"
         
+        print("[LOG_PROGRESS] Complete", flush=True)
         return {
             'section_name': section_name,
             'generated_markdown': generated_content,

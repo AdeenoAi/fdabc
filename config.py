@@ -33,6 +33,10 @@ OUTPUT_DIR = BASE_DIR / "output"
 # Qdrant local path (after BASE_DIR is defined)
 QDRANT_LOCAL_PATH = os.getenv("QDRANT_LOCAL_PATH", str(BASE_DIR / "qdrant_data"))
 
+# LLM configuration
+LLM_PROVIDER = os.getenv("LLM_PROVIDER", "openai")  # "openai" or "grok"
+LLM_MODEL = os.getenv("LLM_MODEL", "gpt-4o")  # Model name (e.g., "gpt-4o", "grok-beta")
+
 # Create directories if they don't exist
 DATA_DIR.mkdir(exist_ok=True)
 OUTPUT_DIR.mkdir(exist_ok=True)

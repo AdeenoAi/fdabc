@@ -6,6 +6,15 @@ from verification_agent import VerificationAgent
 
 logger = logging.getLogger(__name__)
 
+# Try to import config for defaults
+try:
+    from config import LLM_PROVIDER, LLM_MODEL
+    DEFAULT_LLM_PROVIDER = LLM_PROVIDER
+    DEFAULT_LLM_MODEL = LLM_MODEL
+except ImportError:
+    DEFAULT_LLM_PROVIDER = "openai"
+    DEFAULT_LLM_MODEL = "gpt-4o"
+
 
 class ImprovedAgentFlow:
     """Enhanced agent flow with verification and confidence checking."""
@@ -13,11 +22,15 @@ class ImprovedAgentFlow:
     def __init__(
         self,
         collection_name: str = "bio_drug_docs",
-        llm_provider: str = "openai",
-        model: str = "gpt-5",
+        llm_provider: Optional[str] = None,  # "openai" or "grok" (defaults to .env)
+        model: Optional[str] = None,  # Model name (defaults to .env)
         qdrant_url: str = "http://localhost:6333",
         enable_verification: bool = True
     ):
+        # Use provided values or fall back to .env defaults
+        llm_provider = llm_provider or DEFAULT_LLM_PROVIDER
+        model = model or DEFAULT_LLM_MODEL
+        
         # Initialize generation agent
         self.generation_agent = LlamaAgentFlow(
             collection_name=collection_name,
@@ -73,6 +86,7 @@ class ImprovedAgentFlow:
         verification_result = None
         if self.enable_verification and self.verification_agent:
             logger.info("Step 2: Verifying generated content...")
+            print("[LOG_PROGRESS] Verifying content...", flush=True)
             try:
                 verification_result = self.verification_agent.verify_generated_content(
                     generated_content=generated_content,
@@ -80,8 +94,17 @@ class ImprovedAgentFlow:
                     template_structure=template_structure,
                     top_k=verify_top_k
                 )
+                confidence = verification_result.get('confidence', 0)
+                issues = verification_result.get('issues', [])
+                issue_count = len(issues) if issues else 0
+                
+                if issue_count > 0:
+                    print(f"[LOG_PROGRESS] Verification: {confidence:.0%} confidence, {issue_count} issue(s)", flush=True)
+                else:
+                    print(f"[LOG_PROGRESS] Verification: {confidence:.0%} confidence", flush=True)
             except Exception as e:
                 logger.error(f"Verification failed: {e}")
+                print(f"[LOG_ERROR] Verification failed: {str(e)}", flush=True)
                 verification_result = {
                     'verified': False,
                     'confidence': 0.5,
@@ -96,6 +119,7 @@ class ImprovedAgentFlow:
                 'warnings': ['Verification disabled']
             }
         
+        print("[LOG_PROGRESS] Complete", flush=True)
         # Combine results
         return {
             'section_name': section_name,
