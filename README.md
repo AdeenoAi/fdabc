@@ -150,13 +150,12 @@ nextjs-ui/
 Create a `.env` file in the project root (optional):
 
 ```env
-QDRANT_URL=http://localhost:6333
-QDRANT_COLLECTION=bio_drug_docs
-QDRANT_LOCAL_MODE=false
-EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
-CHUNK_SIZE=1000
-CHUNK_OVERLAP=200
-LLAMA_CLOUD_API_KEY=your_llama_key
+LLAMA_CLOUD_API_KEY=# For LlamaParse
+OPENAI_API_KEY=# For GPT-4
+XAI_API_KEY=    # Optional, for Grok
+
+
+LLM_PROVIDER=openai
 ```
 
 For the frontend, create `nextjs-ui/.env.local`:
