@@ -5,6 +5,7 @@ import FileUpload from '@/components/FileUpload'
 import SectionSelector from '@/components/SectionSelector'
 import DocumentEditor from '@/components/DocumentEditor'
 import CollectionManager from '@/components/CollectionManager'
+import GenerationPreview from '@/components/GenerationPreview'
 import toast from 'react-hot-toast'
 
 type UploadedFile = {
@@ -20,7 +21,7 @@ type Section = {
 }
 
 export default function Home() {
-  const [step, setStep] = useState<'upload' | 'select' | 'generate' | 'edit'>('upload')
+  const [step, setStep] = useState<'upload' | 'select' | 'preview' | 'generate' | 'edit'>('upload')
   const [templateFile, setTemplateFile] = useState<File | null>(null)
   const [documentFiles, setDocumentFiles] = useState<File[]>([])
   const [sections, setSections] = useState<Section[]>([])
@@ -28,6 +29,8 @@ export default function Home() {
   const [generatedContent, setGeneratedContent] = useState<string>('')
   const [isGenerating, setIsGenerating] = useState(false)
   const [verification, setVerification] = useState<any>(null)
+  const [generationPreview, setGenerationPreview] = useState<any>(null)
+  const [isLoadingPreview, setIsLoadingPreview] = useState(false)
 
   const handleTemplateUpload = (file: File) => {
     setTemplateFile(file)
@@ -98,21 +101,59 @@ export default function Home() {
     }
   }
 
-  const handleSectionSelect = (sectionName: string) => {
+  const handleSectionSelect = async (sectionName: string) => {
     setSelectedSection(sectionName)
+    // Load preview for the selected section
+    await loadPreview(sectionName)
   }
 
-  const handleGenerate = async () => {
+  const loadPreview = async (sectionName: string) => {
+    if (!templateFile) return
+
+    setIsLoadingPreview(true)
+    const formData = new FormData()
+    formData.append('template', templateFile)
+    formData.append('section', sectionName)
+
+    try {
+      const response = await fetch('/api/preview', {
+        method: 'POST',
+        body: formData,
+      })
+
+      if (!response.ok) throw new Error('Preview failed')
+
+      const data = await response.json()
+      setGenerationPreview(data)
+      setStep('preview')
+    } catch (error) {
+      toast.error('Failed to load preview')
+      console.error(error)
+      // Fallback to direct generation if preview fails
+      setStep('select')
+    } finally {
+      setIsLoadingPreview(false)
+    }
+  }
+
+  const handleGenerate = async (editedPrompt?: string) => {
     if (!templateFile || !selectedSection) {
       toast.error('Please upload template and select a section')
       return
     }
 
     setIsGenerating(true)
+    setStep('edit') // Move to edit step to show loading
+    
     const formData = new FormData()
     formData.append('template', templateFile)
     formData.append('section', selectedSection)
     formData.append('collection', collectionName)
+    
+    // Add custom prompt if edited and not empty
+    if (editedPrompt && editedPrompt.trim()) {
+      formData.append('custom_prompt', editedPrompt)
+    }
 
     // Add documents if uploaded (these are for potential future use or temporary indexing)
     documentFiles.forEach((file) => {
@@ -125,10 +166,22 @@ export default function Home() {
         body: formData,
       })
 
-      if (!response.ok) throw new Error('Generation failed')
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Generation failed' }))
+        throw new Error(errorData.error || errorData.details || 'Generation failed')
+      }
 
       const data = await response.json()
-      setGeneratedContent(data.content || '')
+      
+      if (data.error && !data.content) {
+        // If there's an error and no content, show detailed error
+        const errorDetails = data.details ? `\n\n${data.details}` : ''
+        const errorInfo = data.stdout || data.stderr ? `\n\nDebug info:\n${data.stdout || ''}\n${data.stderr || ''}` : ''
+        throw new Error(`${data.error}${errorDetails}${errorInfo}`)
+      }
+      
+      // Even if there's an error flag, show the content (which might be an error message)
+      setGeneratedContent(data.content || data.error || 'No content received')
       setVerification(data.verification || null)
       setStep('edit')
       
@@ -144,9 +197,10 @@ export default function Home() {
       } else {
         toast.success('Section generated successfully!')
       }
-    } catch (error) {
-      toast.error('Failed to generate section')
-      console.error(error)
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to generate section')
+      console.error('Generation error:', error)
+      setStep('preview') // Go back to preview if generation fails
     } finally {
       setIsGenerating(false)
     }
@@ -258,16 +312,43 @@ export default function Home() {
           </div>
         )}
 
+        {/* Preview Step */}
+        {step === 'preview' && generationPreview && (
+          <GenerationPreview
+            preview={generationPreview}
+            onGenerate={handleGenerate}
+            onBack={() => setStep('select')}
+          />
+        )}
+
+        {/* Loading Preview */}
+        {isLoadingPreview && (
+          <div className="bg-white rounded-lg shadow-lg p-6">
+            <div className="text-center py-8">
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mb-4"></div>
+              <p className="text-gray-600">Loading generation preview...</p>
+            </div>
+          </div>
+        )}
+
         {/* Generation & Edit Step */}
         {(step === 'generate' || step === 'edit') && (
           <div className="bg-white rounded-lg shadow-lg p-6">
-            <DocumentEditor
-              content={generatedContent}
-              sectionName={selectedSection}
-              onSave={handleSave}
-              onBack={() => setStep('select')}
-              verification={verification}
-            />
+            {isGenerating ? (
+              <div className="text-center py-12">
+                <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mb-4"></div>
+                <p className="text-gray-600 text-lg">Generating section...</p>
+                <p className="text-gray-500 text-sm mt-2">This may take a minute</p>
+              </div>
+            ) : (
+              <DocumentEditor
+                content={generatedContent}
+                sectionName={selectedSection}
+                onSave={handleSave}
+                onBack={() => setStep('preview')}
+                verification={verification}
+              />
+            )}
           </div>
         )}
       </div>

@@ -157,7 +157,8 @@ class LlamaAgentFlow:
         self,
         section_name: str,
         template_content: Optional[str] = None,
-        top_k: int = 10
+        top_k: int = 10,
+        custom_prompt: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Process a section using LlamaIndex RAG and LLM generation.
@@ -176,7 +177,11 @@ class LlamaAgentFlow:
         template_tables = self._extract_template_tables(template_content) if template_content else []
         num_template_tables = len(template_tables)
         
-        if template_content:
+        # Use custom prompt if provided, otherwise build default
+        if custom_prompt:
+            query = custom_prompt
+            logger.info("Using custom prompt for generation")
+        elif template_content:
             query = f"""You are generating a {section_name} section based on the EXACT template structure provided below.
 
 CRITICAL INSTRUCTIONS:
@@ -199,9 +204,12 @@ Extract data from source documents and populate ONLY the template's existing tab
             similarity_top_k=top_k
         )
         
+        # Use REFINE mode for better quality - iteratively refines across nodes
+        # instead of aggressively summarizing like COMPACT mode
+        # This preserves more detail and accuracy for technical documents
         query_engine = RetrieverQueryEngine.from_args(
             retriever=retriever,
-            response_mode=ResponseMode.COMPACT,
+            response_mode=ResponseMode.REFINE,
             node_postprocessors=[],
             verbose=True
         )
@@ -260,6 +268,34 @@ ACCURACY REQUIREMENTS:
 
 {table_instructions}
 
+STRUCTURED DATA EXTRACTION:
+- Extract ALL contact information: names, phone numbers, email addresses
+- Extract conversation details, messages, and communication context
+- Organize information clearly with clear sections for each entity/contact
+- Format contact information as:
+  📝 Info: [Name or contact details]
+  📱 Phone: [Phone number]
+  📧 Email: [Email address]  
+  💬 Conversation: [Details or messages]
+- Extract and preserve ALL specific details from conversations
+- Include timestamps, dates, and contextual information when available
+- Group related information together (same person's name, phone, email together)
+
+CONTENT ORGANIZATION:
+- For each distinct contact/person, create a clear section with all their information
+- Use clear labels and formatting to separate different types of information
+- Preserve the original wording and details from source documents
+- Do NOT summarize away important details like phone numbers, emails, or specific conversation points
+- List each contact/entry separately with all associated information
+
+CONTENT QUALITY REQUIREMENTS:
+- Use the retrieved source documents DIRECTLY - do not over-summarize or compress the information
+- Include specific details, measurements, and technical information from the sources
+- Preserve technical terminology and precise language from source documents
+- Include relevant context and explanations
+- Write comprehensive, detailed content that accurately represents the source material
+- When multiple sources provide related information, include all relevant details rather than summarizing
+
 CRITICAL: Extract and report values EXACTLY as they appear in source documents. 
 Do not modify, estimate, or approximate numerical values.
 
@@ -271,13 +307,26 @@ TABLE VALUE VERIFICATION:
 """
         
         logger.info("Querying RAG system with table preservation...")
-        response = query_engine.query(enhanced_query)
-        
-        generated_content = str(response)
+        try:
+            response = query_engine.query(enhanced_query)
+            
+            generated_content = str(response).strip()
+            
+            if not generated_content:
+                logger.error("LLM returned empty response!")
+                generated_content = f"# {section_name}\n\n[Error: LLM returned empty response. Please check your API keys and model availability.]"
+            
+            logger.info(f"Generated content length: {len(generated_content)} characters")
+        except Exception as e:
+            logger.error(f"Error during LLM query: {e}")
+            import traceback
+            traceback.print_exc()
+            generated_content = f"# {section_name}\n\n[Error during generation: {str(e)}]"
+            response = None
         
         # Extract source metadata
         source_nodes = []
-        if hasattr(response, 'source_nodes'):
+        if response and hasattr(response, 'source_nodes'):
             source_nodes = response.source_nodes
         
         sources = []
@@ -297,6 +346,11 @@ TABLE VALUE VERIFICATION:
                 num_template_tables,
                 template_tables
             )
+        
+        # Ensure we always return non-empty content
+        if not generated_content or not generated_content.strip():
+            logger.warning("Generated content is empty, creating placeholder")
+            generated_content = f"# {section_name}\n\n[No content generated. Please check:\n1. API keys are set correctly\n2. Documents are indexed in collection\n3. LLM model is available]"
         
         return {
             'section_name': section_name,

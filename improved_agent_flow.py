@@ -14,7 +14,7 @@ class ImprovedAgentFlow:
         self,
         collection_name: str = "bio_drug_docs",
         llm_provider: str = "openai",
-        model: str = "gpt-4o",
+        model: str = "gpt-5",
         qdrant_url: str = "http://localhost:6333",
         enable_verification: bool = True
     ):
@@ -47,7 +47,8 @@ class ImprovedAgentFlow:
         template_content: Optional[str] = None,
         template_structure: Optional[Dict] = None,
         top_k: int = 15,
-        verify_top_k: int = 15
+        verify_top_k: int = 15,
+        custom_prompt: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Generate section and verify quality.
@@ -62,7 +63,8 @@ class ImprovedAgentFlow:
         generation_result = self.generation_agent.process_section(
             section_name=section_name,
             template_content=template_content,
-            top_k=top_k
+            top_k=top_k,
+            custom_prompt=custom_prompt
         )
         
         generated_content = generation_result['generated_markdown']
